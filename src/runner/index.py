@@ -26,7 +26,7 @@ def on_message(channel: Channel, method: Basic.Deliver, props: BasicProperties, 
 
 consumer = Consumer(
     host=environ["RABBITMQ_HOST"],
-    queue=environ["TASKS_QUEUE_NAME"].upper(),
+    queue=environ["TASKS_QUEUE_NAME"],
     prefetch_value=int(environ["PREFETCH_VALUE"]),
     on_message=on_message,
 )
