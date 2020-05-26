@@ -1,0 +1,23 @@
+version: "2.4"
+
+services:
+
+  runner:
+    build: src/runner
+    scale: 4
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    volumes:
+      # Makes the docker daemon available from inside the container
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PREFETCH_VALUE
+      - LOGGER_LEVEL
+      - LOG_FORMAT
+      - TASKS_QUEUE_NAME
+
+  rabbitmq:
+    image: rabbitmq:alpine
+    restart: on-failure
+    hostname: rabbitmq
