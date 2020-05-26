@@ -1,187 +1,171 @@
-"""
-This is a consumer module that will handle unexpected interactions
-with RabbitMQ such as channel and connection closures.
-
-If RabbitMQ closes the connection, the consumer will stop and indicate
-that reconnection is necessary (you should check the `should_reconnect` property).
-
-NOTE : The default exchange is used
-"""
-
 import logging
+from typing import Union
 
 import pika
+from pika import SelectConnection
+from pika.adapters import IOLoop
 from pika.channel import Channel
-from pika.connection import Connection
 from pika.spec import Basic, Queue
 
 LOGGER = logging.getLogger()
 
-# state
-should_reconnect = False
-_closing = False
-_consuming = False
 
-# rabbitmq parameters
-_connection: Connection
-_channel: Channel
-_consumer_tag: str
-_queue: str
-_prefetch_count: int
-_on_message: callable
-
-
-def _on_connection_open(connection: Connection):
-    """Called once the connection to RabbitMQ has been established."""
-    LOGGER.info("Connection opened")
-    LOGGER.info("Creating a new channel ...")
-    connection.channel(on_open_callback=_on_channel_open)
-
-
-def _on_connection_open_error(connection: Connection, err: Exception):
-    """Called if the connection to RabbitMQ can't be established."""
-    global should_reconnect
-
-    LOGGER.error(f"Connection open failed : {err}")
-    should_reconnect = True
-    stop()
-
-
-def _on_connection_closed(connection: Connection, reason: Exception):
-    """Called when the connection to RabbitMQ is closed unexpectedly."""
-    global _channel, should_reconnect
-
-    _channel = None
-
-    if _closing:
-        connection.ioloop.stop()
-    else:
-        LOGGER.warning(f"Connection closed : {reason}")
-        should_reconnect = True
-        stop()
-
-
-def _on_channel_open(channel: Channel):
-    """Called when the channel has been opened."""
-    global _channel
-
-    LOGGER.info("Channel opened")
-    _channel = channel
-    channel.add_on_close_callback(_on_channel_closed)
-
-    LOGGER.info(f'Declaring queue "{_queue}" ...')
-    channel.queue_declare(queue=_queue, callback=_on_queue_declare_ok)
-
-
-def _on_channel_closed(channel: Channel, reason: Exception):
+class Consumer:
     """
-    Called when RabbitMQ unexpectedly closes the channel.
+    A consumer class that will handle unexpected interactions
+    with RabbitMQ such as channel and connection closures.
 
-    Channels are usually closed if you attempt to do something that
-    violates the protocol, such as re-declare an exchange or queue with
-    different parameters.
+    If RabbitMQ closes the connection, the consumer will stop and indicate
+    that reconnection is necessary (you should check the `should_reconnect` property).
+
+    NOTE : The default exchange is used
     """
-    global _consuming
+    ioloop: Union[IOLoop, None]
+    connection: Union[SelectConnection, None]
+    channel: Union[Channel, None]
+    should_reconnect: bool
 
-    LOGGER.warning(f"Channel was closed {channel} : {reason}")
-    _consuming = False
+    def __init__(self, host: str, queue: str, prefetch_value: int, on_message: callable):
+        # state
+        self.should_reconnect = False
+        self._closing = False
+        self._consuming = False
 
-    connection = channel.connection
+        # rabbitmq parameters
+        self._host = str(host)
+        self._queue = str(queue)
+        self._prefetch_count = int(prefetch_value)
+        self._on_message = on_message
+        self._consumer_tag = None
 
-    if connection.is_closing or connection.is_closed:
-        LOGGER.info("Connection is closing or already closed")
-    else:
-        LOGGER.info("Closing connection ...")
-        connection.close()
+        # objects
+        self.ioloop = None
+        self.connection = None
+        self.channel = None
 
+    def _on_connection_open(self, connection: SelectConnection):
+        """Called once the connection to RabbitMQ has been established."""
+        LOGGER.info("Connection opened")
+        LOGGER.info("Creating a new channel ...")
+        connection.channel(on_open_callback=self._on_channel_open)
 
-def _on_queue_declare_ok(method: Queue.DeclareOk):
-    """Called when the Queue.Declare RPC call has completed."""
-    _channel.basic_qos(prefetch_count=_prefetch_count, callback=_on_basic_qos_ok)
+    def _on_connection_open_error(self, connection: SelectConnection, err: Exception):
+        """Called if the connection to RabbitMQ can't be established."""
+        LOGGER.error(f"Connection open failed : {err}")
+        self.should_reconnect = True
+        self.stop()
 
+    def _on_connection_closed(self, connection: SelectConnection, reason: Exception):
+        """Called when the connection to RabbitMQ is closed unexpectedly."""
+        self.channel = None
 
-def _on_basic_qos_ok(method: Basic.QosOk):
-    """Called when the Queue.Declare RPC call has completed.."""
-    global _consumer_tag, _consuming
+        if self._closing:
+            self.ioloop.stop()
+        else:
+            LOGGER.warning(f"Connection closed : {reason}")
+            self.should_reconnect = True
+            self.stop()
 
-    LOGGER.info(f"QOS set to : {_prefetch_count}")
-    _channel.add_on_cancel_callback(_on_consumer_cancelled)
+    def _on_channel_open(self, channel: Channel):
+        """Called when the channel has been opened."""
+        LOGGER.info("Channel opened")
+        self.channel = channel
+        channel.add_on_close_callback(self._on_channel_closed)
 
-    LOGGER.info("Issuing consumer related RPC commands")
-    # used to uniquely identify the consumer with RabbitMQ.
-    # We keep the value to use it when we want to cancel consuming.
-    _consumer_tag = _channel.basic_consume(_queue, _on_message)
+        LOGGER.info(f'Declaring queue "{self._queue}" ...')
+        channel.queue_declare(queue=self._queue, callback=self._on_queue_declare_ok)
 
-    LOGGER.info("!!! Waiting for messages !!!")
-    _consuming = True
+    def _on_channel_closed(self, channel: Channel, reason: Exception):
+        """
+        Called when RabbitMQ unexpectedly closes the channel.
 
+        Channels are usually closed if you attempt to do something that
+        violates the protocol, such as re-declare an exchange or queue with
+        different parameters.
+        """
+        LOGGER.warning(f"Channel was closed {channel} : {reason}")
+        self._consuming = False
 
-def _on_consumer_cancelled(method: Basic.CancelOk):
-    """Called when RabbitMQ sends a Basic.Cancel for a consumer receiving messages."""
-    LOGGER.info(f"Consumer was cancelled remotely, shutting down : {method}")
-    if _channel:
-        _channel.close()
+        if self.connection.is_closing or self.connection.is_closed:
+            LOGGER.info("Connection is closing or already closed")
+        else:
+            LOGGER.info("Closing connection ...")
+            self.connection.close()
 
+    def _on_queue_declare_ok(self, method: Queue.DeclareOk):
+        """Called when the Queue.Declare RPC call has completed."""
+        self.channel.basic_qos(prefetch_count=self._prefetch_count, callback=self._on_basic_qos_ok)
 
-def _on_cancel_ok(method: Basic.CancelOk):
-    """Called when RabbitMQ acknowledges the cancellation of a consumer."""
-    global _consuming
+    def _on_basic_qos_ok(self, method: Basic.QosOk):
+        """Called when the Queue.Declare RPC call has completed.."""
+        LOGGER.info(f"QOS set to : {self._prefetch_count}")
+        self.channel.add_on_cancel_callback(self._on_consumer_cancelled)
 
-    LOGGER.info("RabbitMQ acknowledged the cancellation")
-    _consuming = False
+        LOGGER.info("Issuing consumer related RPC commands")
+        # used to uniquely identify the consumer with RabbitMQ.
+        # We keep the value to use it when we want to cancel consuming.
+        self._consumer_tag = self.channel.basic_consume(self._queue, self._on_message)
 
-    LOGGER.info("Closing the channel ...")
-    _channel.close()
+        LOGGER.info("!!! Waiting for messages !!!")
+        self._consuming = True
 
+    def _on_consumer_cancelled(self, method: Basic.CancelOk):
+        """Called when RabbitMQ sends a Basic.Cancel for a consumer receiving messages."""
+        LOGGER.info(f"Consumer was cancelled remotely, shutting down : {method}")
+        if self.channel:
+            self.channel.close()
 
-def start(host: str, queue: str, prefetch_value: int, on_message: callable):
-    """connect to RabbitMQ and then start the IOLoop."""
-    global _queue, _prefetch_count, _on_message, _connection
+    def _on_cancel_ok(self, method: Basic.CancelOk):
+        """Called when RabbitMQ acknowledges the cancellation of a consumer."""
+        LOGGER.info("RabbitMQ acknowledged the cancellation")
+        self._consuming = False
 
-    host = str(host)
-    _queue = str(queue)
-    _prefetch_count = int(prefetch_value)
-    _on_message = on_message
+        LOGGER.info("Closing the channel ...")
+        self.channel.close()
 
-    try:
-        LOGGER.info(f"Connecting to {host} ...")
-        _connection = pika.SelectConnection(
-            parameters=pika.ConnectionParameters(host),
-            on_open_callback=_on_connection_open,
-            on_open_error_callback=_on_connection_open_error,
-            on_close_callback=_on_connection_closed,
-        )
+    def start(self):
+        """connect to RabbitMQ and then start the IOLoop."""
+        try:
+            LOGGER.info(f"Connecting to {self._host} ...")
+            self.connection = pika.SelectConnection(
+                parameters=pika.ConnectionParameters(self._host),
+                on_open_callback=self._on_connection_open,
+                on_open_error_callback=self._on_connection_open_error,
+                on_close_callback=self._on_connection_closed,
+            )
 
-        _connection.ioloop.start()
+            # noinspection PyTypeChecker
+            self.ioloop = self.connection.ioloop
 
-    finally:
-        stop()
+            # This is a blocking method
+            self.ioloop.start()
 
+        except:
+            self.stop()
 
-def stop():
-    """Gracefully shutdown the connection."""
-    global _closing, _consumer_tag
+    def stop(self):
+        """Gracefully shutdown the connection."""
+        if self._closing:
+            return
 
-    if _closing:
-        return
+        LOGGER.info("Stopping ...")
+        self._closing = True
 
-    LOGGER.info("Stopping ...")
-    _closing = True
+        if not self._consuming:
 
-    if not _consuming:
+            self.ioloop.stop()
 
-        _connection.ioloop.stop()
+        elif self.channel:
 
-    elif _channel:
+            LOGGER.info(f"Sending a Basic.Cancel RPC command to RabbitMQ from the consumer # {self._consumer_tag}")
+            self.channel.basic_cancel(self._consumer_tag, self._on_cancel_ok)
 
-        LOGGER.info(f"Sending a Basic.Cancel RPC command to RabbitMQ from the consumer # {_consumer_tag}")
-        _channel.basic_cancel(_consumer_tag, _on_cancel_ok)
+            # we need to start the IOLoop again because this method is invoked
+            # when CTRL-C is pressed, raising a KeyboardInterrupt exception. This
+            # exception stops the IOLoop which needs to be running for pika to
+            # communicate with RabbitMQ. All of the commands issued prior to starting
+            # the IOLoop will be buffered but not processed.
+            self.ioloop.start()
 
-        # we need to start the IOLoop again because this method is invoked
-        # when CTRL-C is pressed, raising a KeyboardInterrupt exception. This
-        # exception stops the IOLoop which needs to be running for pika to
-        # communicate with RabbitMQ. All of the commands issued prior to starting
-        # the IOLoop will be buffered but not processed.
-        _connection.ioloop.start()
-
-    LOGGER.info("Stopped gracefully")
+        LOGGER.info("Stopped gracefully")
+        self._closing = False
