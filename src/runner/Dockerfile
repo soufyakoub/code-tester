@@ -6,8 +6,8 @@ WORKDIR /root
 
 COPY .  ./
 
-RUN chmod +x ./wait-for-it.sh
+RUN chmod +x ./wait-for-it && mv ./wait-for-it /bin
 
 # waiting for rabbitmq to be ready before starting
-ENTRYPOINT ["./wait-for-it.sh" , "rabbitmq:5672" , "--"]
+ENTRYPOINT ["wait-for-it" , "rabbitmq:5672" , "--"]
 CMD ["python" , "index.py"]

@@ -10,18 +10,18 @@ echoerr() {
 }
 
 usage() {
-  exitcode="$1"
   cat <<USAGE >&2
 Usage:
-  $cmdname host:port [-t timeout] [-- command args]
+  $0 host:port [-t timeout] [-- command args]
   -q | --quiet                        Do not output any status messages
   -t TIMEOUT | --timeout=timeout      Timeout in seconds, zero for no timeout
   -- COMMAND ARGS                     Execute command with args after the test finishes
 USAGE
-  exit "$exitcode"
+  exit "$1"
 }
 
 wait_for() {
+
   for i in $(seq $TIMEOUT); do
     nc -z "$HOST" "$PORT" >/dev/null 2>&1
 
@@ -34,7 +34,9 @@ wait_for() {
     fi
     sleep 1
   done
+
   echo "[wait-for-it] : Operation timed out" >&2
+
   exit 1
 }
 
@@ -72,7 +74,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-if [ "$HOST" = "" -o "$PORT" = "" ]; then
+if [ "$HOST" = "" ] || [ "$PORT" = "" ]; then
   echoerr "Error: you need to provide a host and port to test."
   usage 2
 fi
