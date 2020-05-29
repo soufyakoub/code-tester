@@ -19,6 +19,6 @@ services:
       - RABBITMQ_HOST
 
   rabbitmq:
-    image: rabbitmq:alpine
+    image: rabbitmq:management-alpine
     restart: on-failure
     hostname: rabbitmq
