@@ -5,5 +5,5 @@ test :
 	python -m pytest -d -v -n auto --cov=src --rootdir=tests tests/specs
 	coverage html
 
-gen_req :
+req :
 	pipenv lock --dev -r > requirements.txt
