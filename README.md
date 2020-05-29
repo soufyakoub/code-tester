@@ -1,4 +1,4 @@
-# code-tester
+# code-tester [![Build Status](https://travis-ci.org/soufyakoub/code-tester.svg?branch=master)](https://travis-ci.org/soufyakoub/code-tester) [![codecov](https://codecov.io/gh/soufyakoub/code-tester/branch/master/graph/badge.svg)](https://codecov.io/gh/soufyakoub/code-tester)
 
 > Write and run tests against sample code without setting up language environments.
 
@@ -33,6 +33,14 @@ Running tests is as simple as typing `make test` in a terminal.
 Coverage reports are located in `tests/coverage`. By default, terminal and html reports are generated.
 
 If you need them as json or xml, just run `coverage json` or `coverage xml`.
+
+# Contributing
+
+Please feel free to submit issues and pull requests.
+
+# License
+
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/soufyakoub/code-tester/blob/master/LICENSE) file for details.
 
 [docker]: https://www.docker.com/
 [docker-compose]: https://docs.docker.com/compose/
