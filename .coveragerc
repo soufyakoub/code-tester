@@ -1,0 +1,21 @@
+[run]
+source=src
+branch = true
+data_file = tests/coverage/.coverage
+dynamic_context = test_function
+parallel = true
+
+[report]
+show_missing = true
+
+[html]
+directory = tests/coverage/report_html
+show_contexts = true
+
+[xml]
+output = tests/coverage/report.xml
+
+[json]
+output = tests/coverage/report.json
+pretty_print = true
+show_contexts = true
