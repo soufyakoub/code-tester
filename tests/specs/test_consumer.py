@@ -100,6 +100,20 @@ def test_kill_rabbitmq(rabbitmq: Container, monkeypatch, sig):
     assert consumer.should_reconnect is True
 
 
+def test_remote_consumer_cancel(rabbitmq: Container, monkeypatch):
+    def on_basic_qos_ok(consumer):
+        # Force the rabbitmq host to cancel the consumer remotely
+        consumer.channel.queue_delete("tasks")
+
+    consumer = set_up_consumer(
+        rabbitmq.ips.primary,
+        monkeypatch=monkeypatch,
+        on_basic_qos_ok=on_basic_qos_ok,
+    )
+
+    assert consumer.should_reconnect is True
+
+
 def test_without_rabbitmq():
     consumer = set_up_consumer(
         "non_available_host",
