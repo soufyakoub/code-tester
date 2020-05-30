@@ -6,4 +6,4 @@ test :
 	coverage html
 
 req :
-	pipenv lock --dev -r > requirements.txt
+	pip freeze > requirements.txt
