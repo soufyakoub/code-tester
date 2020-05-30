@@ -21,7 +21,7 @@ def test_normal_workflow(rabbitmq: Container, monkeypatch):
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
-        monkeypatch,
+        monkeypatch=monkeypatch,
         on_basic_qos_ok=on_basic_qos_ok,
         on_message=on_message,
     )
@@ -36,7 +36,7 @@ def test_stop_gracefully(rabbitmq: Container, monkeypatch):
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
-        monkeypatch,
+        monkeypatch=monkeypatch,
         on_basic_qos_ok=on_basic_qos_ok,
     )
 
@@ -49,7 +49,7 @@ def test_close_connection(rabbitmq: Container, monkeypatch):
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
-        monkeypatch,
+        monkeypatch=monkeypatch,
         on_basic_qos_ok=on_basic_qos_ok,
     )
 
@@ -62,7 +62,7 @@ def test_close_channel(rabbitmq: Container, monkeypatch):
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
-        monkeypatch,
+        monkeypatch=monkeypatch,
         on_basic_qos_ok=on_basic_qos_ok,
     )
 
@@ -78,7 +78,7 @@ def test_on_message_exception(rabbitmq: Container, monkeypatch):
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
-        monkeypatch,
+        monkeypatch=monkeypatch,
         on_basic_qos_ok=on_basic_qos_ok,
         on_message=on_message,
     )
@@ -93,7 +93,7 @@ def test_kill_rabbitmq(rabbitmq: Container, monkeypatch, sig):
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
-        monkeypatch,
+        monkeypatch=monkeypatch,
         on_basic_qos_ok=on_basic_qos_ok,
     )
 

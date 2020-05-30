@@ -1,29 +1,28 @@
-from _pytest.monkeypatch import MonkeyPatch
-
 from src.runner.consumer import Consumer
 
 
-def set_up_consumer(
-        target_host: str,
-        monkeypatch: MonkeyPatch = None,
-        *,
-        on_basic_qos_ok: callable = None,
-        on_message: callable = None
-) -> Consumer:
-    if not callable(on_message):
-        def on_message(*args):
-            pass
+def set_up_consumer(target_host: str, **kwargs) -> Consumer:
+    consumer = Consumer(
+        target_host,
+        "tasks",
+        1,
+        kwargs.get("on_message", lambda *args: None),
+    )
 
-    consumer = Consumer(target_host, "tasks", 1, on_message)
+    monkeypatch = kwargs.get("monkeypatch")
 
-    if monkeypatch and callable(on_basic_qos_ok):
-        old_on_basic_qos_ok = consumer._on_basic_qos_ok
+    if monkeypatch:
 
-        def mock_on_basic_qos_ok(*args):
-            old_on_basic_qos_ok(*args)
-            on_basic_qos_ok(consumer)
+        on_basic_qos_ok = kwargs.get("on_basic_qos_ok")
 
-        monkeypatch.setattr(consumer, "_on_basic_qos_ok", mock_on_basic_qos_ok)
+        if callable(on_basic_qos_ok):
+            old_on_basic_qos_ok = consumer._on_basic_qos_ok
+
+            def mock_on_basic_qos_ok(*args):
+                old_on_basic_qos_ok(*args)
+                on_basic_qos_ok(consumer)
+
+            monkeypatch.setattr(consumer, "_on_basic_qos_ok", mock_on_basic_qos_ok)
 
     # This is a blocking method
     consumer.start()

@@ -1,8 +1,7 @@
 import logging
 from typing import Union
 
-import pika
-from pika import SelectConnection
+from pika import ConnectionParameters, SelectConnection
 from pika.adapters import IOLoop
 from pika.channel import Channel
 from pika.spec import Basic, Queue
@@ -16,9 +15,9 @@ class Consumer:
     with RabbitMQ such as channel and connection closures.
 
     If RabbitMQ closes the connection, the consumer will stop and indicate
-    that reconnection is necessary (you should check the `should_reconnect` property).
+    that reconnection is needed (you should check the `should_reconnect` property).
 
-    NOTE : The default exchange is used
+    NOTE : The default exchange is used.
     """
     ioloop: Union[IOLoop, None]
     connection: Union[SelectConnection, None]
@@ -97,7 +96,7 @@ class Consumer:
         self.channel.basic_qos(prefetch_count=self._prefetch_count, callback=self._on_basic_qos_ok)
 
     def _on_basic_qos_ok(self, method: Basic.QosOk):
-        """Called when the Queue.Declare RPC call has completed.."""
+        """Called when the Queue.Declare RPC call has completed."""
         LOGGER.info(f"QOS set to : {self._prefetch_count}")
         self.channel.add_on_cancel_callback(self._on_consumer_cancelled)
 
@@ -115,7 +114,7 @@ class Consumer:
         if self.channel:
             self.channel.close()
 
-    def _on_cancel_ok(self, method: Basic.CancelOk):
+    def _on_consumer_cancel_ok(self, method: Basic.CancelOk):
         """Called when RabbitMQ acknowledges the cancellation of a consumer."""
         LOGGER.info("RabbitMQ acknowledged the cancellation")
         self._consuming = False
@@ -126,9 +125,9 @@ class Consumer:
     def start(self):
         """connect to RabbitMQ and then start the IOLoop."""
         try:
-            LOGGER.info(f"Connecting to {self._host} ...")
-            self.connection = pika.SelectConnection(
-                parameters=pika.ConnectionParameters(self._host),
+            LOGGER.info(f'Connecting to the host "{self._host}" ...')
+            self.connection = SelectConnection(
+                parameters=ConnectionParameters(self._host),
                 on_open_callback=self._on_connection_open,
                 on_open_error_callback=self._on_connection_open_error,
                 on_close_callback=self._on_connection_closed,
@@ -158,13 +157,11 @@ class Consumer:
         elif self.channel:
 
             LOGGER.info(f"Sending a Basic.Cancel RPC command to RabbitMQ from the consumer # {self._consumer_tag}")
-            self.channel.basic_cancel(self._consumer_tag, self._on_cancel_ok)
+            self.channel.basic_cancel(self._consumer_tag, self._on_consumer_cancel_ok)
 
-            # we need to start the IOLoop again because this method is invoked
-            # when CTRL-C is pressed, raising a KeyboardInterrupt exception. This
-            # exception stops the IOLoop which needs to be running for pika to
-            # communicate with RabbitMQ. All of the commands issued prior to starting
-            # the IOLoop will be buffered but not processed.
+            # When a KeyboardInterrupt exception is raised the IOLoop stops.
+            # It needs to be running for pika to communicate with RabbitMQ.
+            # Commands issued prior to restarting it will be buffered but not processed.
             self.ioloop.start()
 
         LOGGER.info("Stopped gracefully")

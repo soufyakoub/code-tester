@@ -30,9 +30,9 @@ Installing project dependencies is done using:
 
 Running tests is as simple as typing `make test` in a terminal.
 
-Coverage reports are located in `tests/coverage`. By default, terminal and html reports are generated.
+Coverage reports are located in `tests/coverage`. By default, terminal and HTML reports are generated.
 
-If you need them as json or xml, just run `coverage json` or `coverage xml`.
+If you need them as **JSON** or **XML**, just run `coverage json` or `coverage xml`.
 
 # Contributing
 
