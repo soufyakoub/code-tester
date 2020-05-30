@@ -1,14 +1,18 @@
 import logging
 import signal
 from errno import ECONNABORTED
-from os import environ
+from os import getenv
 
 from pika.channel import Channel
 from pika.spec import Basic, BasicProperties
 
 from consumer import Consumer
 
-logging.basicConfig(format=environ["LOG_FORMAT"], level=environ["LOGGER_LEVEL"].upper())
+logging.basicConfig(
+    format=getenv("LOG_FORMAT", "%(asctime)s - [%(levelname)s] : %(message)s"),
+    level=getenv("LOGGER_LEVEL", "INFO").upper(),
+)
+
 LOGGER = logging.getLogger()
 
 # Handle SIGTERM and SIGQUIT the same way SIGINT is handled
@@ -25,9 +29,9 @@ def on_message(channel: Channel, method: Basic.Deliver, props: BasicProperties, 
 
 
 consumer = Consumer(
-    host=environ["RABBITMQ_HOST"],
-    queue=environ["TASKS_QUEUE_NAME"],
-    prefetch_value=int(environ["PREFETCH_VALUE"]),
+    host=getenv("RABBITMQ_HOST", "rabbitmq"),
+    queue=getenv("TASKS_QUEUE_NAME", "tasks"),
+    prefetch_value=getenv("PREFETCH_VALUE", 1),
     on_message=on_message,
 )
 
