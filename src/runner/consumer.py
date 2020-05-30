@@ -108,7 +108,7 @@ class Consumer:
         LOGGER.info("!!! Waiting for messages !!!")
         self._consuming = True
 
-    def _on_consumer_cancelled(self, method: Basic.CancelOk):
+    def _on_consumer_cancelled(self, method: Basic.Cancel):
         """Called when RabbitMQ sends a Basic.Cancel for a consumer receiving messages."""
         LOGGER.info(f"Consumer was cancelled remotely, shutting down : {method}")
         if self.channel:
