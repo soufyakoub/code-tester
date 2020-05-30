@@ -1,4 +1,4 @@
-from pytest_docker_tools import container, wrappers
+from pytest_docker_tools import container, volume, wrappers
 
 
 class RabbitMQContainer(wrappers.Container):
@@ -9,4 +9,17 @@ class RabbitMQContainer(wrappers.Container):
         return False
 
 
-rabbitmq = container(image="rabbitmq:management-alpine", wrapper_class=RabbitMQContainer, timeout=60)
+# rabbitmq:management-alpine has a VOLUME instruction in its Dockerfile,
+# so when the container is removed after each test case,
+# we're left with big volumes.
+# this fixture takes care of removing them.
+data_volume = volume()
+
+rabbitmq = container(
+    image="rabbitmq:management-alpine",
+    volumes={
+        "{data_volume.name}": {"bind": "/var/lib/rabbitmq"},
+    },
+    wrapper_class=RabbitMQContainer,
+    timeout=60,
+)
