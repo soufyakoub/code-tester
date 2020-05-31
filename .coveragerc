@@ -9,13 +9,13 @@ parallel = true
 show_missing = true
 
 [html]
-directory = tests/coverage/report_html
+directory = tests/coverage/coverage_html
 show_contexts = true
 
 [xml]
-output = tests/coverage/report.xml
+output = tests/coverage/coverage.xml
 
 [json]
-output = tests/coverage/report.json
+output = tests/coverage/coverage.json
 pretty_print = true
 show_contexts = true
