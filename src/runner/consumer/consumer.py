@@ -25,6 +25,10 @@ class Consumer:
     should_reconnect: bool
 
     def __init__(self, host: str, queue: str, prefetch_value: int, on_message: callable):
+
+        if not callable(on_message):
+            raise TypeError(f'expected "on_message" to be a callable')
+
         # state
         self.should_reconnect = False
         self._closing = False
