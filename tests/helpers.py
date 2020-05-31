@@ -1,30 +1,29 @@
+from _pytest.monkeypatch import MonkeyPatch
+
 from src.runner.consumer import Consumer
 
 
-def set_up_consumer(target_host: str, **kwargs) -> Consumer:
+def set_up_consumer(target_host: str, monkeypatch: MonkeyPatch = None, **kwargs) -> Consumer:
+    """
+    Set up a consumer instance with hooks.
+
+    Hooks are called with the real method or callback arguments after they're done executing.
+    """
     consumer = Consumer(
         target_host,
         "tasks",
         1,
-        kwargs.get("on_message", lambda *args: None),
+        kwargs.pop("on_message", lambda *args: None),
     )
 
-    monkeypatch = kwargs.get("monkeypatch")
-
     if monkeypatch:
+        for method_name, callback in kwargs.items():
+            original_method = getattr(consumer, method_name)
 
-        on_basic_qos_ok = kwargs.get("on_basic_qos_ok")
+            def mock_method(*args, **kwargs):
+                original_method(*args, **kwargs)
+                callback(consumer, *args, **kwargs)
 
-        if callable(on_basic_qos_ok):
-            old_on_basic_qos_ok = consumer._on_basic_qos_ok
-
-            def mock_on_basic_qos_ok(*args):
-                old_on_basic_qos_ok(*args)
-                on_basic_qos_ok(consumer)
-
-            monkeypatch.setattr(consumer, "_on_basic_qos_ok", mock_on_basic_qos_ok)
-
-    # This is a blocking method
-    consumer.start()
+            monkeypatch.setattr(consumer, method_name, mock_method)
 
     return consumer
