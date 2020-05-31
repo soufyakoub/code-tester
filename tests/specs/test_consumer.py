@@ -134,3 +134,11 @@ def test_without_rabbitmq():
     consumer.start()
 
     assert consumer.should_reconnect is True
+
+
+def test_on_message_param_type():
+    with pytest.raises(TypeError):
+        consumer = set_up_consumer(
+            "non_available_host",
+            on_message="something that's not a callable"
+        )
