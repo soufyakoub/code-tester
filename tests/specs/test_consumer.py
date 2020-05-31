@@ -17,7 +17,7 @@ def test_normal_workflow(rabbitmq: Container, monkeypatch):
         signal.raise_signal(signal.SIGINT)
 
     def _on_basic_qos_ok(self, _):
-        self.channel.basic_publish("", "tasks", body=b"some message")
+        self.channel.basic_publish("", self._queue, body=b"some message")
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
@@ -82,7 +82,7 @@ def test_on_message_exception(rabbitmq: Container, monkeypatch):
         raise Exception("something unexpected happened while handling incoming message")
 
     def _on_basic_qos_ok(self, _):
-        self.channel.basic_publish("", "tasks", body=b"some message")
+        self.channel.basic_publish("", self._queue, body=b"some message")
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
@@ -115,7 +115,7 @@ def test_kill_rabbitmq(rabbitmq: Container, monkeypatch, sig):
 def test_remote_consumer_cancel(rabbitmq: Container, monkeypatch):
     def _on_basic_qos_ok(self, _):
         # Force the rabbitmq host to cancel the consumer remotely
-        consumer.channel.queue_delete("tasks")
+        consumer.channel.queue_delete(self._queue)
 
     consumer = set_up_consumer(
         rabbitmq.ips.primary,
@@ -138,7 +138,7 @@ def test_without_rabbitmq():
 
 def test_on_message_param_type():
     with pytest.raises(TypeError):
-        consumer = set_up_consumer(
+        set_up_consumer(
             "non_available_host",
             on_message="something that's not a callable"
         )
