@@ -1,6 +1,13 @@
-# code-tester [![Build Status](https://travis-ci.org/soufyakoub/code-tester.svg?branch=master)](https://travis-ci.org/soufyakoub/code-tester) [![codecov](https://codecov.io/gh/soufyakoub/code-tester/branch/master/graph/badge.svg)](https://codecov.io/gh/soufyakoub/code-tester)
+[![Build Status][build status badge]][build status]
+[![Coverage Status][coverage status badge]][coverage status]
+[![MIT license][license badge]][license]
+
+# code-tester
 
 > Write and run tests against sample code without setting up language environments.
+
+| :warning: :memo: This work is still in progress|
+|---|
 
 # Usage
 
@@ -40,9 +47,15 @@ Please feel free to submit issues and pull requests.
 
 # License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/soufyakoub/code-tester/blob/master/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE][license badge] file for details.
 
-[docker]: https://www.docker.com/
-[docker-compose]: https://docs.docker.com/compose/
-[pip]: https://pypi.org/project/pip/
-[pipenv]: https://pypi.org/project/pipenv/
+[coverage status badge]: https://coveralls.io/repos/github/soufyakoub/code-tester/badge.svg
+[build status badge]: https://travis-ci.com/soufyakoub/code-tester.svg?branch=master
+[license badge]: https://img.shields.io/badge/License-MIT-blue.svg
+[coverage status]: https://coveralls.io/github/soufyakoub/code-tester
+[build status]: https://travis-ci.com/soufyakoub/code-tester
+[license]: https://github.com/soufyakoub/code-tester/blob/master/LICENSE
+[docker]: https://www.docker.com
+[docker-compose]: https://docs.docker.com/compose
+[pip]: https://pypi.org/project/pip
+[pipenv]: https://pypi.org/project/pipenv
